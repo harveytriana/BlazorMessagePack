@@ -18,13 +18,13 @@ namespace BlazorMessagePack.Server.Hubs
         public async Task GenerateReport(int rows)
         {
             var forecasts = Enumerable.Range(1, rows).Select(index => new WeatherForecast {
-                Date = DateTime.Now.AddDays(index),
+                Date = DateTime.UtcNow.AddMinutes(index),
                 TemperatureC = _random.Next(-20, 55),
                 Summary = Summaries[_random.Next(Summaries.Length)]
             });
 
             var report = new WeatherReport {
-                StampTime = DateTime.UtcNow,
+                ReportDate = DateTime.UtcNow,
                 Forecasts = forecasts
             };
 

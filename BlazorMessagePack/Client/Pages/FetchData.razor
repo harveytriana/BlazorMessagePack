@@ -16,6 +16,7 @@
 </p>
 <br />
 @if (forecasts != null) {
+    <h4>Report: @reportDate.ToShortDateString()  @reportDate.ToLongTimeString()</h4>
     <table class="table table-sm" style="font-family:Courier New, Courier, monospace">
         <thead>
             <tr>
@@ -28,7 +29,7 @@
         <tbody>
             @foreach (var forecast in forecasts) {
                 <tr>
-                    <td>@forecast.Date.ToShortDateString()</td>
+                    <td>@forecast.Date.ToLocalTime().ToShortTimeString()</td>
                     <td>@forecast.TemperatureC</td>
                     <td>@forecast.TemperatureF</td>
                     <td>@forecast.Summary</td>
@@ -36,34 +37,35 @@
             }
         </tbody>
     </table>
+    <hr />
+    <p>Records: @forecasts.Length</p>
 }
 
 @code {
     WeatherForecast[] forecasts;
+    DateTime reportDate;
     HubConnection hubConnection;
-    bool disconnected;
+    bool disconnected = true;
 
     protected override async Task OnInitializedAsync()
     {
-        Console.WriteLine("URI: {0}", NavigationManager.ToAbsoluteUri("/WeatherForecast"));
-
         try {
             hubConnection = new HubConnectionBuilder()
                .WithUrl(NavigationManager.ToAbsoluteUri("/WeatherForecast"))
                .Build();
             await hubConnection.StartAsync();
 
-            disconnected= hubConnection.State== HubConnectionState.Disconnected;
+            disconnected = hubConnection.State == HubConnectionState.Disconnected;
         }
         catch (Exception e) {
             Console.WriteLine("Exception: {0}", e.Message);
         }
 
         hubConnection.On<WeatherReport>("Report", (weatherReport) => {
+            reportDate = weatherReport.ReportDate.ToLocalTime();
             forecasts = weatherReport.Forecasts.ToArray();
             StateHasChanged();
         });
-
     }
 
     async Task GenerateReport()
