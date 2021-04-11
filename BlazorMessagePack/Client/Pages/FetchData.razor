@@ -1,6 +1,7 @@
 ﻿@page "/fetchdata"
 @using BlazorMessagePack.Shared
 @using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.Extensions.DependencyInjection
 @inject NavigationManager NavigationManager
 @implements IAsyncDisposable
 
@@ -52,6 +53,7 @@
         try {
             hubConnection = new HubConnectionBuilder()
                .WithUrl(NavigationManager.ToAbsoluteUri("/WeatherForecast"))
+               .AddMessagePackProtocol()
                .Build();
             await hubConnection.StartAsync();
 

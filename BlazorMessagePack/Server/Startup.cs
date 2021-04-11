@@ -1,7 +1,6 @@
 using BlazorMessagePack.Server.Hubs;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,12 +23,16 @@ namespace BlazorMessagePack.Server
 
             services.AddControllersWithViews();
             services.AddRazorPages();
-            services.AddSignalR();
+
+            #region SignalR
+            services.AddSignalR().AddMessagePackProtocol();
+
             services.AddResponseCompression(opts =>
             {
                 opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
                     new[] { "application/octet-stream" });
             });
+            #endregion
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
