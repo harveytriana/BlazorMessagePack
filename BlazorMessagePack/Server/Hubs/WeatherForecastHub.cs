@@ -1,4 +1,7 @@
-﻿using BlazorMessagePack.Shared;
+﻿// ===========================
+// BlazorSpread.net
+// ===========================
+using BlazorMessagePack.Shared;
 using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Linq;
