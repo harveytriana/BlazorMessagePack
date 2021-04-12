@@ -17,8 +17,3 @@ namespace BlazorMessagePack.Server
                 });
     }
 }
-
-
-//gRPC
-//https://www.youtube.com/watch?v=yGgkY4SLu1k
-//https://grpcblazorperf.azurewebsites.net/
