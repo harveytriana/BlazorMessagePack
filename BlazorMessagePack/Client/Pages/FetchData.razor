@@ -10,78 +10,156 @@
 @inject NavigationManager NavigationManager
 @implements IAsyncDisposable
 
-<h1>Weather forecast</h1>
+<h1>SignalR Transmission Format</h1>
 <hr />
 <p>This component demonstrates fetching data from the server.</p>
-<p>
+<table class="table">
+    <tr>
+        <td>
+            <label>Format:</label>
+            <select class="form-control"
+                    @onchange="ChangeFormat">
+                <option value="JS">Json Format</option>
+                <option value="MP">Messagepack</option>
+            </select>
+        </td>
+        <td>
+            <label>Recueste records in pulse:</label>
+            <input type="number"
+                   min="10" max="6000" step="10"
+                   class="form-control"
+                   @bind="count" />
+        </td>
+    </tr>
+</table>
+<div>
     <button class="btn btn-primary"
-            disabled="@disconnected"
-            @onclick="GenerateReport">
-        Generate Report
+            disabled="@disabledCommand"
+            style="width:100%"
+            @onclick="Execute">
+        @prompt
     </button>
-</p>
+</div>
 <br />
-@if (forecasts != null) {
-    <h4>Report: @reportDate.ToShortDateString()  @reportDate.ToLongTimeString()</h4>
-    <table class="table table-sm" style="font-family:Courier New, Courier, monospace">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Temp. (C)</th>
-                <th>Temp. (F)</th>
-                <th>Summary</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var forecast in forecasts) {
+<table class="table table-sm" style="font-family:Courier New, Courier, monospace">
+    <thead>
+        <tr>
+            <th>Records</th>
+            <th>Report</th>
+            <th>Format</th>
+            <th>Delay</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (reportLines != null) {
+            @foreach (var i in reportLines) {
                 <tr>
-                    <td>@forecast.Date.ToLocalTime().ToShortTimeString()</td>
-                    <td>@forecast.TemperatureC</td>
-                    <td>@forecast.TemperatureF</td>
-                    <td>@forecast.Summary</td>
+                    <td>@i.Records</td>
+                    <td>@i.Request.ToShortTimeString()</td>
+                    <td>@i.Format</td>
+                    <td>@i.delay.ToString("0.000000")</td>
                 </tr>
-            }
-        </tbody>
-    </table>
-    <hr />
-    <p>Records: @forecasts.Length</p>
-}
+            }}
+    </tbody>
+</table>
 
 @code {
-    WeatherForecast[] forecasts;
-    DateTime reportDate;
-    HubConnection hubConnection;
-    bool disconnected = true;
+    record ReportLine(int Records, DateTime Request, string Format, double delay);
+    List<ReportLine> reportLines;
+
+    bool disabledCommand = true;
+    int count = 3000;
+    string prompt = "Connecting...";
+    string restFormat = "JS";
+
+    HubConnection connection;
+
+    DateTime startTime;
 
     protected override async Task OnInitializedAsync()
     {
-        try {
-            hubConnection = new HubConnectionBuilder()
-               .WithUrl(NavigationManager.ToAbsoluteUri("/WeatherForecast"))
-               .AddMessagePackProtocol()
-               .Build();
-            await hubConnection.StartAsync();
-
-            disconnected = hubConnection.State == HubConnectionState.Disconnected;
-        }
-        catch (Exception e) {
-            Console.WriteLine("Exception: {0}", e.Message);
-        }
-
-        hubConnection.On<WeatherReport>("Report", (weatherReport) => {
-            reportDate = weatherReport.ReportDate.ToLocalTime();
-            forecasts = weatherReport.Forecasts.ToArray();
-            StateHasChanged();
-        });
+        reportLines = new List<ReportLine>();
+        await Connect();
     }
 
-    async Task GenerateReport()
+    protected async Task Connect()
     {
-        await hubConnection.SendAsync("GenerateReport", 50);
+        var url = NavigationManager.ToAbsoluteUri("/WeatherForecast");
+        try {
+            DeactiveCommands("Connecting...");
+            await DisposeAsync();
+
+            if (restFormat == "MP") {
+                connection = new HubConnectionBuilder()
+                    .WithUrl(url)
+                    .AddMessagePackProtocol()
+                    .Build();
+            }
+            else {
+                connection = new HubConnectionBuilder()
+                    .WithUrl(url)
+                    .Build();
+            }
+            await connection.StartAsync();
+            // if connected then 
+            ActiveCommands();
+            // subscribes to signslr event
+            connection.On<WeatherReport>("Report", (weatherReport) => {
+                AddReportLine();
+            });
+        }
+        catch {
+            prompt = "Error";
+        }
+    }
+
+    async Task Execute()
+    {
+        DeactiveCommands("Processing...");
+        // stamp time
+        startTime = DateTime.Now;
+        // data request
+        await connection.SendAsync("GenerateReport", count);
+    }
+
+    void AddReportLine()
+    {
+        reportLines.Add(new ReportLine(
+            count,
+            DateTime.Now,
+            restFormat == "MP" ? "MessagePack" : "Json Format",
+            DateTime.Now.Subtract(startTime).TotalSeconds)
+        );
+        ActiveCommands();
+        StateHasChanged();
+    }
+
+    async Task ChangeFormat(ChangeEventArgs e)
+    {
+        var selected = e.Value.ToString();
+        if (restFormat != selected) {
+            restFormat = selected;
+            // connect to new format
+            await Connect();
+        }
+    }
+
+    void ActiveCommands()
+    {
+        prompt = "Excecute";
+        disabledCommand = false;
+    }
+
+    void DeactiveCommands(string message)
+    {
+        prompt = message;
+        disabledCommand = false;
     }
 
     public async ValueTask DisposeAsync()
     {
-        await hubConnection.DisposeAsync();
+        if (connection != null) await connection.DisposeAsync();
+        await Task.Delay(200);
     }
+
 }

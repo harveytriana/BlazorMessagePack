@@ -1,0 +1,112 @@
+﻿@*
+    ===========================
+        BlazorSpread.net
+    ===========================
+*@
+@page "/fetchdata-mp"
+@using BlazorMessagePack.Shared
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.Extensions.DependencyInjection
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable
+
+<h1>Weather forecast</h1>
+<hr />
+<p>This component demonstrates fetching data from the server.</p>
+<div>
+    <label>Recueste records in pulse:</label>
+    <input type="number"
+           min="10" max="6000" step="10"
+           class="form-control"
+           @bind="count" />
+</div>
+<br />
+<div>
+    <label>Use MessagePack Protocol:</label>
+    <input type="checkbox"
+           class="form-check-inline"
+           @bind="useMessagepack" />
+</div>
+<br />
+<div>
+    <button class="btn btn-primary"
+            disabled="@disconnected"
+            @onclick="GenerateReport">
+        Generate Report
+    </button>
+</div>
+<br />
+@if (forecasts != null) {
+    <p>Report: @reportDate.ToString("dd-MM-yy HH:mm:ss")</p>
+    <p>Records: @forecasts.Length</p>
+    <p>Spent time: @delay</p>
+    <table class="table table-sm" style="font-family:Courier New, Courier, monospace">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Temp. (C)</th>
+                <th>Temp. (F)</th>
+                <th>Summary</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (int i = 0; i < 100; i++) {
+                <tr>
+                    <td>@forecasts[i].Date.ToLocalTime().ToShortTimeString()</td>
+                    <td>@forecasts[i].TemperatureC</td>
+                    <td>@forecasts[i].TemperatureF</td>
+                    <td>@forecasts[i].Summary</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <hr />
+}
+
+@code {
+    WeatherForecast[] forecasts;
+    DateTime reportDate;
+    HubConnection hubConnection;
+    bool disconnected = true;
+    DateTime startTime;
+    string delay;
+    int count = 4000;
+    bool useMessagepack;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try {
+            hubConnection = new HubConnectionBuilder()
+               .WithUrl(NavigationManager.ToAbsoluteUri("/WeatherForecast"))
+               .AddJsonProtocol()
+               .Build();
+            await hubConnection.StartAsync();
+
+            disconnected = hubConnection.State == HubConnectionState.Disconnected;
+        }
+        catch (Exception e) {
+            Console.WriteLine("Exception: {0}", e.Message);
+        }
+
+        hubConnection.On<WeatherReport>("Report", (weatherReport) => {
+
+            delay = $"{DateTime.Now.Subtract(startTime).TotalSeconds} s";
+
+            reportDate = weatherReport.ReportDate.ToLocalTime();
+            forecasts = weatherReport.Forecasts.ToArray();
+            StateHasChanged();
+        });
+    }
+
+    async Task GenerateReport()
+    {
+        startTime = DateTime.Now;
+
+        await hubConnection.SendAsync("GenerateReport", 4000);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await hubConnection.DisposeAsync();
+    }
+}
