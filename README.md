@@ -2,6 +2,8 @@
 
 «MessagePack is a fast and compact binary serialization format. Ideal when performance and bandwidth are an issue because it creates smaller messages compared to JSON.» I will focus on showing how to enable the protocol in a Blazor application. As an example I take the classic `WeatherForecast` service, enable it to generate a simple SignalR service, and finally enable `MessagePack`. I use a Blazor application hosted on ASP.NET Core.
 
+> *Publicación actualizada, en la que he incluido un comparativo entre los formatos.*
+
 **The model**
 
 `WeatherForecast` is extended to include a more elaborate object, `WeatherReport`.

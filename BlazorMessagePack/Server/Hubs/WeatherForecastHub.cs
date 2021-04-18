@@ -13,17 +13,14 @@ namespace BlazorMessagePack.Server.Hubs
     {
         static readonly string[] Summaries = new[]
         {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+            "Freezing", "Bracing", "Chilly", "Cool", "Mild", 
+            "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
         };
 
         static readonly Random _random = new();
 
-        static int _i;
-
         public async Task GenerateReport(int rows)
         {
-            System.Diagnostics.Trace.WriteLine($"Call: {++_i}");
-
             var forecasts = Enumerable.Range(1, rows).Select(index => new WeatherForecast {
                 Date = DateTime.UtcNow.AddMinutes(index),
                 TemperatureC = _random.Next(-20, 55),
